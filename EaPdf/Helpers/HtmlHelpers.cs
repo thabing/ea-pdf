@@ -48,7 +48,8 @@ namespace UIUCLibrary.EaPdf.Helpers
                 OptionReadEncoding = false,
                 OptionXmlForceOriginalComment = false,
                 BackwardCompatibility = false,
-                OptionPreserveXmlNamespaces = true
+                OptionPreserveXmlNamespaces = true,
+                GlobalAttributeValueQuote = AttributeValueQuote.DoubleQuote
             };
             hdoc.LoadHtml(ret);
 

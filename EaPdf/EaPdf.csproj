@@ -440,7 +440,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Fonts\" />
     <Folder Include="Properties\" />
   </ItemGroup>
 

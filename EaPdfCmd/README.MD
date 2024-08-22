@@ -26,8 +26,8 @@ PATH environment variable to make it easier to run the application from the comm
 
 Besides the above, the application also requires the following dependencies to be installed:
 
-- The application is written in C# and requires version 6 of the .NET Runtime to be installed. The 
-  runtime can be downloaded from [Microsoft](https://dotnet.microsoft.com/download/dotnet/6.0). Be sure to install the runtime for your particular OS 
+- The application is written in C# and requires version 8 of the .NET Runtime to be installed. The 
+  runtime can be downloaded from [Microsoft](https://dotnet.microsoft.com/download/dotnet/8.0). Be sure to install the runtime for your particular OS 
   and hardware platform; note that you **do not need** the SDK, ASP.NET, nor Desktop runtimes.
 
 - The Saxon XSLT processor must be installed to support the XSLT transformations. The Saxon Home  

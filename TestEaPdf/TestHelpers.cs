@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Xml;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
@@ -20,6 +21,22 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestHelpers
     {
+
+        [TestMethod]
+        public void TestHashHelpers()
+        {
+            var md5 = HashHelpers.CreateHashAlgorithm("MD5");
+
+            Assert.IsNotNull(md5);
+            Assert.IsInstanceOfType(md5, typeof(MD5));
+
+            var sha1 = HashHelpers.CreateHashAlgorithm("sha1");
+            Assert.IsNotNull(sha1);
+            Assert.IsInstanceOfType(sha1, typeof(SHA1));
+
+            var notSupported = HashHelpers.CreateHashAlgorithm("SHA3");
+            Assert.IsNull(notSupported);
+        }
 
         [DataRow("abcd", "abcd")]
         [DataRow(@"ab""cd", @"""ab\""cd""")]

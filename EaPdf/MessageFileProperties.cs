@@ -31,7 +31,7 @@ namespace UIUCLibrary.EaPdf
             this.GlobalId = source.GlobalId;
             this.MessageFormat = source.MessageFormat;
             this.HashAlgorithmName = source.HashAlgorithmName;
-            this.HashAlgorithm = HashAlgorithm.Create(HashAlgorithmName) ?? EmailToEaxsProcessor.DefaultHashAlgorithm;
+            this.HashAlgorithm = HashHelpers.CreateHashAlgorithm(HashAlgorithmName) ?? EmailToEaxsProcessor.DefaultHashAlgorithm;
         }
 
         /// <summary>
@@ -265,7 +265,7 @@ namespace UIUCLibrary.EaPdf
                 return HashAlgorithmName;
             }
 
-            var alg = HashAlgorithm.Create(hashName);
+            var alg = HashHelpers.CreateHashAlgorithm(hashName);
             if (alg != null)
             {
                 HashAlgorithm.Dispose(); //dispose of the previous algorithm

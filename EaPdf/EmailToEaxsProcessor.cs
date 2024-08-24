@@ -2334,7 +2334,7 @@ namespace UIUCLibrary.EaPdf
 
 
             //set up hashing
-            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
+            using var cryptoHashAlg = HashHelpers.CreateHashAlgorithm(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
             byte[] hash;
             long fileSize;
 
@@ -2556,7 +2556,7 @@ namespace UIUCLibrary.EaPdf
             var content = part.Content;
 
             using var contentStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write);
-            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
+            using var cryptoHashAlg = HashHelpers.CreateHashAlgorithm(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
 
             (int width, int height) imageDims = (0, 0);
@@ -2601,7 +2601,7 @@ namespace UIUCLibrary.EaPdf
             //      This would provide more context if the external file is ever separated from the main XML email message file
 
             using var contentStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write);
-            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
+            using var cryptoHashAlg = HashHelpers.CreateHashAlgorithm(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
 
             var extXmlWriter = XmlWriter.Create(cryptoStream, new XmlWriterSettings
@@ -2811,7 +2811,7 @@ namespace UIUCLibrary.EaPdf
 
             mimeMsgProps.MessageSize = newBuffer.Length;
 
-            var hashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm; //Fallback to known hash algorithm
+            var hashAlg = HashHelpers.CreateHashAlgorithm(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm; //Fallback to known hash algorithm
             mimeMsgProps.MessageHash = hashAlg.ComputeHash(newBuffer);
 
             //just for debugging

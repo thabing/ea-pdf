@@ -12,9 +12,6 @@ namespace UIUCLibrary.EaPdf.Helpers
 
     public static class HtmlHelpers
     {
-        //Add any needed non-standard character entities here; note that character entities are case-sensitive
-        public static readonly Dictionary<string, int> ExtraCharacterEntities = new() { { "QUOT", 0x22 } };
-
         /// <summary>
         /// Use the HTML Agility Pack to parse the HTML and return it as valid XHTML
         /// </summary>

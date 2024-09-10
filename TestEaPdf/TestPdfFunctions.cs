@@ -388,13 +388,23 @@ namespace UIUCLibrary.TestEaPdf
                     SaveTextAsXhtml = true, //required to render html inside the PDF
                     MaximumXmlFileSize = maxFileSize,
                     IncludeSubFolders = true,
-                    AllowMultipleSourceFilesPerOutputFile = true
+                    AllowMultipleSourceFilesPerOutputFile = true //this is how all the original tests were written
                 };
                 if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
                     settings.SkipAfterMessageId = skipAfterMsgId;
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);
                 _ = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+
+                var createdFiles = eProc.CreatedFiles; 
+                if(maxFileSize == 0)
+                {
+                    Assert.AreEqual(1, createdFiles.Count);
+                }
+                else
+                {
+                    Assert.IsTrue(createdFiles.Count > 1);
+                } 
 
                 return xmlFile;
             }
@@ -408,7 +418,6 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(folderPath) ?? ".", Path.GetFileName(folderPath) + "Out", Path.ChangeExtension(Path.GetFileName(folderPath), "xml"));
                 var inFolder = Path.Combine(testFilesBaseDirectory, folderPath);
                 var suffix = "_eml" + (saveAttachmentsExt ? "_ext" : "") + (wrapExtContentInXml ? "_wrap" : "");
                 var outFolder = Path.Combine(Path.GetDirectoryName(inFolder) ?? ".", "out_" + Path.GetFileName(inFolder) + suffix);
@@ -419,11 +428,14 @@ namespace UIUCLibrary.TestEaPdf
                     WrapExternalContentInXml = wrapExtContentInXml,  //Must be true for XEP to properly attach external PDFs
                     SaveTextAsXhtml = true, //required to render html inside the PDF
                     MaximumXmlFileSize = maxFileSize,
-                    IncludeSubFolders = true
+                    IncludeSubFolders = true,
+                    AllowMultipleSourceFilesPerOutputFile = true //this is how all the original tests were written
                 };
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);
                 _ = eProc.ConvertFolderOfEmlToEaxs(inFolder, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+
+                var xmlFile = eProc.CreatedFiles.Single();
                 return xmlFile;
             }
             else

@@ -33,7 +33,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// Track references to Filespec dictionaries by checksum and messageId
         /// Assumes that the _same message_ will not contain multiple attachments of the exact same file or checksum
         /// </summary>
-        private Dictionary<(string checksum, string messageId), PdfIndirectReference> FilespecsByCheckSum = new();
+        private Dictionary<(string checksum, string messageId), PdfIndirectReference> FilespecsByCheckSumAndMsgId = new();
 
         /// <summary>
         /// Instantiate the ITextSharpPdfEnhancer, note that the input PDF file can be modified by this class,
@@ -375,9 +375,11 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         if (!string.IsNullOrWhiteSpace(embeddedFile.Hash))
                         {
                             paramsDict.Put(new PdfName("CheckSum"), new PdfString(embeddedFile.HashBytes).SetHexWriting(true));
-                            foreach (var grp in embeddedFileGrp)
+                            //get the files from the group that matches the description so that FilespecsByCheckSumAndMsgId can be updated to the correct indRef
+                            //this is needed because the embeddedFileGrp can contain multiple files with the same hash, but for different messages, but the descriptions are unique  
+                            foreach (var matchedFile in embeddedFileGrp.Where(g => g.Description == descs[fileNum]))
                             {
-                                if (!FilespecsByCheckSum.TryAdd((grp.Hash, grp.MessageId), indRef))
+                                if (!FilespecsByCheckSumAndMsgId.TryAdd((matchedFile.Hash, matchedFile.MessageId), indRef))
                                 {
                                     _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments: Filespec for attachment '{checksum}' '{messageId}' already exists in FilespecsByCheckSum", embeddedFile.Hash, embeddedFile.MessageId);
                                 }
@@ -497,7 +499,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         {
             var uniqNameList = ITextSharpHelpers.MakeUniqueNames(nameList);
 
-            var sortedNameList = uniqNameList.OrderBy(kv => kv.Key,StringComparer.Ordinal).ToList();
+            var sortedNameList = uniqNameList.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToList();
 
             //Start with the most basic structure, a single Names dictionary at the root; this seems to be what FOP already uses regardless of the number of entries
             var names = new PdfArray();
@@ -562,19 +564,19 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 var embeddedFile = embeddedFileGrp.First();
 
                 var dests = GetObjsFromNameTreeStartingWith(destsDict, "X_" + embeddedFile.Hash);
-                if (dests.Count == 0) 
+                if (dests.Count == 0)
                 {
                     _logger.LogTrace($"AddFileAttachmentAnnots: No Dest found matching 'X_{embeddedFile.Hash}...'");
                     continue;
                 }
 
                 var annotFileSpecList = annotFileSpecDict[embeddedFileGrp.Key];
-                if (annotFileSpecList.Count == 0) 
-                { 
-                    throw new Exception("AddFileAttachmentAnnots: There should be a filespec for every embedded file."); 
+                if (annotFileSpecList.Count == 0)
+                {
+                    throw new Exception("AddFileAttachmentAnnots: There should be a filespec for every embedded file.");
                 }
 
-                if(annotFileSpecList.Count != dests.Count)
+                if (annotFileSpecList.Count != dests.Count)
                 {
                     throw new Exception("AddFileAttachmentAnnots: The number of matching links should match the number of file specs.");
                 }
@@ -648,46 +650,6 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             strmWrtr.Close();
             memStrm.Close();
-
-            return ret;
-        }
-
-        private PdfIndirectReference AddFilespec(EmbeddedFile embeddedFile, PdfIndirectReference indRef)
-        {
-            _logger.LogTrace("ITextSharpPdfEnhancer: AddFilespec ({fileSpec}, {originalFileName}, {indirectReference}", embeddedFile.UniqueName, embeddedFile.OriginalFileName, indRef);
-
-            var fileSpec = new PdfDictionary();
-            fileSpec.Put(PdfName.TYPE, PdfName.Filespec);
-            fileSpec.Put(PdfName.F, new PdfString(embeddedFile.OriginalFileName, PdfObject.TEXT_UNICODE));
-            fileSpec.Put(PdfName.Uf, new PdfString(embeddedFile.OriginalFileName, PdfObject.TEXT_UNICODE));
-            if (embeddedFile.Relationship != null)
-            {
-                fileSpec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
-            }
-            else
-            {
-                fileSpec.Remove(new PdfName("AFRelationship"));
-            }
-            fileSpec.Put(PdfName.Desc, new PdfString(embeddedFile.Description, PdfObject.TEXT_UNICODE));
-
-            var efDict = new PdfDictionary();
-            efDict.Put(PdfName.F, indRef);
-            efDict.Put(PdfName.Uf, indRef);
-            fileSpec.Put(PdfName.EF, efDict);
-
-            //PdfIndirectObject ret = _stamper.Writer.AddToBody(fileSpec);  //This doesn't seem to work as needed
-            PdfIndirectReference ret = _reader.AddPdfObject(fileSpec);
-
-            //Need to add the fileSpec to the /Catalog/AF array 
-            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
-            var af = catalog.GetAsArray(new PdfName("AF"));
-            af.AddFirst(ret);
-
-            //Need to add the fileSpec to the FilespecsByCheckSum list
-            if (!FilespecsByCheckSum.TryAdd((embeddedFile.Hash, embeddedFile.MessageId), ret))
-            {
-                _logger.LogTrace("ITextSharpPdfEnhancer: AddFilespec: Filespec for attachment '{checksum}' '{messageId}' already exists in FilespecsByCheckSum", embeddedFile.Hash, embeddedFile.MessageId);
-            }
 
             return ret;
         }
@@ -1171,27 +1133,22 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             if (checkSums.Count == 0)
                 return ret;
 
-            foreach (var cs in checkSums)
+            if (string.IsNullOrWhiteSpace(messageId))
+                throw new ArgumentNullException(nameof(messageId));
+
+            var kvs = FilespecsByCheckSumAndMsgId.Where(kv => checkSums.Contains(kv.Key.checksum) && kv.Key.messageId == messageId).Select(kv => kv.Value);
+            if (kvs != null && kvs.Any())
             {
-                var kvs = FilespecsByCheckSum.Where(kv => kv.Key.checksum == cs).Select(kv => kv.Value);
-                if (kvs != null && kvs.Count() > 1)
+                foreach (var indref in kvs)
                 {
-                    kvs = FilespecsByCheckSum.Where(kv => kv.Key.checksum == cs && kv.Key.messageId == messageId).Select(kv => kv.Value);
+                    ret.Add(indref);
                 }
-
-                if (kvs != null && kvs.Any())
-                {
-                    foreach (var indref in kvs)
-                    {
-                        ret.Add(indref);
-                    }
-                }
-                else
-                {
-                    throw new Exception($"Filespec for checksum '{cs}' message-id '{messageId}' not found");
-                }
-
             }
+            else
+            {
+                throw new Exception($"Filespec for checksums '{string.Join("', '", checkSums)}' message-id '{messageId}' not found");
+            }
+
             return ret;
         }
 

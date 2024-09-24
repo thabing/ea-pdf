@@ -33,7 +33,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// Track references to Filespec dictionaries by checksum and messageId
         /// Assumes that the _same message_ will not contain multiple attachments of the exact same file or checksum
         /// </summary>
-        private Dictionary<(string checksum, string messageId), PdfIndirectReference> FilespecsByCheckSumAndMsgId = new();
+        private Dictionary<(string checksum, Guid messageGuid), PdfIndirectReference> FilespecsByCheckSumAndMsgId = new();
 
         /// <summary>
         /// Instantiate the ITextSharpPdfEnhancer, note that the input PDF file can be modified by this class,
@@ -295,6 +295,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                 var fileNames = embeddedFileGrp.Select(e => e.OriginalFileName).ToList();
                 var descs = embeddedFileGrp.Select(e => e.Description).ToList();
+                var guids = embeddedFileGrp.Select(e => e.MessageGuid).ToList();
 
                 var annotFileSpecList = annotFileSpecDict[embeddedFileGrp.Key];
 
@@ -375,15 +376,17 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         if (!string.IsNullOrWhiteSpace(embeddedFile.Hash))
                         {
                             paramsDict.Put(new PdfName("CheckSum"), new PdfString(embeddedFile.HashBytes).SetHexWriting(true));
+
                             //get the files from the group that matches the description so that FilespecsByCheckSumAndMsgId can be updated to the correct indRef
                             //this is needed because the embeddedFileGrp can contain multiple files with the same hash, but for different messages, but the descriptions are unique  
-                            foreach (var matchedFile in embeddedFileGrp.Where(g => g.Description == descs[fileNum]))
+                            foreach (var matchedFile in embeddedFileGrp.Where(g => g.MessageGuid == guids[fileNum]))
                             {
-                                if (!FilespecsByCheckSumAndMsgId.TryAdd((matchedFile.Hash, matchedFile.MessageId), indRef))
+                                if (!FilespecsByCheckSumAndMsgId.TryAdd((matchedFile.Hash, matchedFile.MessageGuid), indRef))
                                 {
-                                    _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments: Filespec for attachment '{checksum}' '{messageId}' already exists in FilespecsByCheckSum", embeddedFile.Hash, embeddedFile.MessageId);
+                                    _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments: Filespec for attachment '{checksum}' '{messageId}' '{messageGuid}' already exists in FilespecsByCheckSum", embeddedFile.Hash, embeddedFile.MessageId, embeddedFile.MessageGuid);
                                 }
                             }
+
                         }
                         else
                         {
@@ -998,7 +1001,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 //Add the AF entry to the metadata dictionary
                 //Find the Filespec entries in the AF array that match the DPart AF entries
 
-                var files = GetReferencesToFilespecsWithCheckSums(dpartNode.AttachmentChecksums, dpartNode.MessageId);
+                var files = GetReferencesToFilespecsWithCheckSums(dpartNode.AttachmentChecksums, dpartNode.MessageId, dpartNode.MessageGuid);
                 if (files.Size > 0)
                 {
                     newDPartDict.Put(new PdfName("AF"), files);
@@ -1123,7 +1126,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <param name="checkSums"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        private PdfArray GetReferencesToFilespecsWithCheckSums(List<string> checkSums, string messageId)
+        private PdfArray GetReferencesToFilespecsWithCheckSums(List<string> checkSums, string messageId, Guid guid)
         {
             var ret = new PdfArray();
 
@@ -1136,7 +1139,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             if (string.IsNullOrWhiteSpace(messageId))
                 throw new ArgumentNullException(nameof(messageId));
 
-            var kvs = FilespecsByCheckSumAndMsgId.Where(kv => checkSums.Contains(kv.Key.checksum) && kv.Key.messageId == messageId).Select(kv => kv.Value);
+            var kvs = FilespecsByCheckSumAndMsgId.Where(kv => checkSums.Contains(kv.Key.checksum) && kv.Key.messageGuid == guid).Select(kv => kv.Value);
             if (kvs != null && kvs.Any())
             {
                 foreach (var indref in kvs)

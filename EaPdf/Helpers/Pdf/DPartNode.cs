@@ -31,6 +31,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        public Guid MessageGuid
+        {
+            get
+            {
+                return new Guid(Dpm.GetValueOrDefault("Mail_GUID") ?? string.Empty); //empty string throws an exception
+            }
+        }
+
         /// <summary>
         /// List of the checksums of the attachments for the dpart node (if any), usually only at the message level
         /// Entries correspond to the AttachmentNames list

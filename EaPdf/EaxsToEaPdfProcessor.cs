@@ -571,8 +571,8 @@ namespace UIUCLibrary.EaPdf
 
             var xml = GetAssetOrAttachmentXmp(rootDPart, hash);
 
-            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? "";
-
+            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? string.Empty;
+            Guid guid = new(extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:Guid", xmlns)?.InnerText ?? string.Empty); //empty string throws exception
 
             ret.Add(new EmbeddedFile()
             {
@@ -587,7 +587,8 @@ namespace UIUCLibrary.EaPdf
                 UniqueName = Path.ChangeExtension(hash, GetFileExtension(extAttachmentNode.ParentNode, xmlns)),
                 Description = GetAttachmentDescription(extAttachmentNode, xmlns),
                 Metadata = xml,
-                MessageId = msgId
+                MessageId = msgId,
+                MessageGuid = guid
             });
 
         }

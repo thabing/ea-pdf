@@ -57,5 +57,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         public XmlDocument? Metadata { get; init; } = null;
 
         public string MessageId { get; init; } = string.Empty;
+
+        public Guid MessageGuid { get; init; } = Guid.Empty;
     }
 }

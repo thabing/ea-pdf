@@ -1468,7 +1468,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             localId++;
-            var messageId = localId;
+            var tempLocalId = localId;
 
             xwriter.WriteStartElement("Message", XM_NS);
 
@@ -1478,7 +1478,7 @@ namespace UIUCLibrary.EaPdf
 
             messageList.Add(new MessageBrief()
             {
-                LocalId = messageId,
+                LocalId = tempLocalId,
                 From = message.From.ToString(),
                 To = message.To.ToString(),
                 Date = message.Date,

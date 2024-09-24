@@ -162,6 +162,12 @@ namespace UIUCLibrary.EaPdf
             localId = ProcessEml(msgFileProps, ref xwriter, ref xstream, localId, messageList);
             WriteFolderClose(xwriter);
 
+
+            if (firstInvocation)
+            {
+                WriteToLogIfDuplicateMessageIds(xwriter, messageList);
+            }
+
             XmlStreamTeardown(xwriter, xstream);
 
             //write the csv file
@@ -373,6 +379,10 @@ namespace UIUCLibrary.EaPdf
                         msgFileProps.FileWasSkipped = true;
                     }
 
+                    if (firstInvocation)
+                    {
+                        WriteToLogIfDuplicateMessageIds(xwriter, messageList);
+                    }
 
                     XmlStreamTeardown(xwriter, xstream);
 
@@ -447,6 +457,11 @@ namespace UIUCLibrary.EaPdf
                 }
 
                 WriteFolderClose(xwriter);
+
+                if (firstInvocation)
+                {
+                    WriteToLogIfDuplicateMessageIds(xwriter, messageList);
+                }
 
                 XmlStreamTeardown(xwriter, xstream);
 
@@ -605,6 +620,11 @@ namespace UIUCLibrary.EaPdf
                     }
                 }
 
+                if (firstInvocation)
+                {
+                    WriteToLogIfDuplicateMessageIds(xwriter, messageList);
+                }
+
                 XmlStreamTeardown(xwriter, xstream);
 
                 _logger.LogInformation("Output XML File: {xmlFilePath}, Total messages: {messageCount}", xmlFilePath, localId - startingLocalId);
@@ -664,6 +684,11 @@ namespace UIUCLibrary.EaPdf
             if (_folders.Count > 0)
             {
                 throw new Exception($"There are {_folders.Count} folders that were not closed.");
+            }
+
+            if (firstInvocation)
+            {
+                WriteToLogIfDuplicateMessageIds(xwriter, messageList);
             }
 
             XmlStreamTeardown(xwriter, xstream);
@@ -2706,6 +2731,23 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteElementString(localName, ns, value);
 
+        }
+
+        private void WriteToLogIfDuplicateMessageIds(XmlWriter xwriter, List<MessageBrief> messages)
+        {
+            var dups = messages.GroupBy(m => m.MessageID).Where(g => g.Count() > 1);
+            if(!dups.Any())
+                return;
+
+            StringBuilder sb = new();
+            sb.AppendLine("Duplicate Message-IDs found:");
+            foreach (var grp in dups)
+            {
+                sb.AppendLine($"   Message-ID: {grp.Key}; duplicates: {grp.Count()}");
+            }
+
+            //Should this be a warning or just info?  This seems somewhat common in some older email collections -- maybe from cc yourself, forwarding, sending on behalf of, etc.
+            WriteToLogInfoMessage(xwriter, sb.ToString().Trim());
         }
 
         private void MimeMessageEndEventHandler(object? sender, MimeMessageEndEventArgs e, Stream mboxStream, MessageFileProperties msgFileProps, MimeMessageProperties mimeMsgProps, bool isMbxFile)

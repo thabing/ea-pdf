@@ -11,6 +11,9 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestFilePathHelpers
     {
+        const string current_drive = "(current drive)";
+
+
         [DataRow(@"C:\one\two\three\..\four\five\.\six\", @"C:\one\two\four\five\six\", true, DisplayName = @"WINDOWS_NORM C:\one\two\three\..\four\five\.\six\")]
         [DataRow(@"C:\one\two\three\four\five\six\..", @"C:\one\two\three\four\five", true, DisplayName = @"WINDOWS_NORM C:\one\two\three\four\five\six\..")]
         [DataRow(@"C:\one\two\three\four\five\six\..\", @"C:\one\two\three\four\five\", true, DisplayName = @"WINDOWS_NORM C:\one\two\three\four\five\six\..\")]
@@ -51,7 +54,8 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow(@"C:/", 0, true, DisplayName = @"WINDOWS_DEPTH C:/")]
         [DataRow(@"/", 0, true, DisplayName = @"WINDOWS_DEPTH /")]
         [DataRow(@"\", 0, true, DisplayName = @"WINDOWS_DEPTH \")]
-        [DataRow(@"C:", -1, true, DisplayName = @"WINDOWS_DEPTH C:")]
+        [DataRow(@"I:", 0, true, DisplayName = @"WINDOWS_DEPTH I: (not current drive)")]
+        [DataRow($"{current_drive}", -1, true, DisplayName = $"WINDOWS_DEPTH {current_drive}")]
         [DataRow(@"test", -1, true, DisplayName = @"WINDOWS_DEPTH test")]
 
         [DataRow(@"/test/test", 2, false, DisplayName = @"LINUX_DEPTH /test/test")]
@@ -65,6 +69,12 @@ namespace UIUCLibrary.TestEaPdf
         [DataTestMethod]
         public void TestFolderDepth(string path, int expectedDepth, bool isWindows)
         {
+            if (path == current_drive)
+            {
+                path = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? path;
+                path = path[..2];
+            }
+
             if (OperatingSystem.IsWindows() == isWindows)
             {
                 if (expectedDepth >= 0)
@@ -406,7 +416,7 @@ namespace UIUCLibrary.TestEaPdf
         [ExpectedException(typeof(ArgumentException))]
         public void TestInvalidFileName(string inFile, string outFolder, bool isWindows)
         {
-            if (OperatingSystem.IsWindows() == isWindows) 
+            if (OperatingSystem.IsWindows() == isWindows)
             {
                 _ = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(inFile, outFolder);
             }

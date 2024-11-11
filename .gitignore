@@ -378,3 +378,4 @@ FodyWeavers.xsd
 /EaPdf/XResources/license.xml
 /EaPdf/XResources/xep_license.xml
 
+*.xpr

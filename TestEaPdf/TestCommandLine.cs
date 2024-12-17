@@ -19,7 +19,7 @@ namespace UIUCLibrary.TestEaPdf
         //capture the console output here
         private StringBuilder ConsoleOutput { get; set; } = new StringBuilder();
 
-        string testFilesBaseInputDirectory = @"D:\EmailsForTesting\CommandLineTests";
+        string testFilesBaseInputDirectory = @"K:\EmailsForTesting\CommandLineTests";
 
         string startingDir = Directory.GetCurrentDirectory();
 

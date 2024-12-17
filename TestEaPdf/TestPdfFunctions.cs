@@ -24,7 +24,7 @@ namespace UIUCLibrary.TestEaPdf
         ILogger<EaxsToEaPdfProcessor>? logger;
         ILoggerFactory? loggerFactory;
         readonly List<string> loggedLines = new();
-        readonly string testFilesBaseDirectory = @"D:\EmailsForTesting\SampleFiles\Testing";
+        readonly string testFilesBaseDirectory = @"K:\EmailsForTesting\SampleFiles\Testing";
 
         [TestInitialize]
         public void InitTest()
@@ -97,6 +97,8 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", false, false, DisplayName = "MOZILLA-FOP")] //Use Mozilla file and FOP with all attachments embedded in XML
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", false, false, DisplayName = "MOZILLA-XEP")] //Use Mozilla file and XEP with all attachments embedded in XML
 
+        [DataRow("MozillaThunderbird\\DLF Distributed Library.sbd\\Obstacles", "fop", false, false, DisplayName = "OBSTACLES-MOZILLA-FOP")] //Use Mozilla obstacles file and FOP with all attachments embedded in XML
+
         [DataTestMethod]
         public void TestEaxsToPdfProcessorLargeFiles(string inPath, string foProcessor, bool ext, bool wrap)
         {
@@ -157,7 +159,10 @@ namespace UIUCLibrary.TestEaPdf
 
                 var xslt = new SaxonXsltTransformer();
                 var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
+                var set = new EaxsToEaPdfProcessorSettings
+                {
+                    SaveFoFiles = true
+                };
 
                 var proc = new EaxsToEaPdfProcessor(logger, xslt, foTransformer, iText, set);
 

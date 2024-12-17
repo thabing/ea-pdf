@@ -25,7 +25,7 @@ namespace UIUCLibrary.TestEaPdf
         readonly List<string> loggedLines = new();
         readonly LogLevel minLogLvl = LogLevel.Trace;
 
-        string testFilesBaseInputDirectory = @"D:\EmailsForTesting\SampleFiles\Testing";
+        string testFilesBaseInputDirectory = @"K:\EmailsForTesting\SampleFiles\Testing";
 
         [TestInitialize]
         public void InitTest()
@@ -106,6 +106,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Weird\\rfc822headers.mbox", "out_rfc822headers", "MD5", true, false, false, false, false, false, 0, 0, 2, DisplayName = "weird-rfc822headers-mbox")] //message from very large mbox which contains txt/rfc822-headers
         [DataRow("Weird\\spam_hexa.mbox", "out_hexa", "MD5", false, false, false, false, false, false, 0, 2, 1, DisplayName = "weird-spam-hexa-mbox")] //weird spam email with 'hexa' encoded content
         [DataRow("Weird\\virus_notif.mbox", "out_notif", "MD5", false, false, false, false, false, false, 0, 1, 2, DisplayName = "weird-virus-notif-mbox")] //weird virus notification with multipart/report, message/delivery-report. and text/rfc822-headers content types
+        //NOTE: the following test will not pass if the mbox file is on Dev Drive because the virus scanner is running in performance (asynchronous) mode and won't block the file IO as expected by the test
         [DataRow("Weird\\virus_payload.mbox", "out_virus_payload", "MD5", true, false, false, false, false, false, 0, 1, 2, DisplayName = "weird-virus-payload-mbox")] //message from very large mbox which contains a virus payload
         [DataRow("Weird\\bad-dates.mbox", "out_bad-dates", "MD5", true, false, false, false, false, false, 0, 11, 70, DisplayName = "weird-bad-dates-mbox")] //messages with deliberately bad date formats, or missing dates
 
@@ -561,30 +562,30 @@ namespace UIUCLibrary.TestEaPdf
                 quick, maxOutFileSize, xhtml, oneMsgId);
         }
 
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_allx", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_allx", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
             true, 0, true, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_splitx", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_splitx", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
             true, 10000000, true, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
 
         //messages with specific problems
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 0, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 0, 1,
             false, 10000000, true, "d5c1fc93-14b1-48ef-985d-0fbb38878f7e@las1s04mta936.xt.local", DisplayName = "xhtml-skip1-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
             false, 10000000, true, "1E.44.44510.680AEB06@aj.mta1vrest.cc.prd.sparkpost", DisplayName = "xhtml-skip2-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
 
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 2, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 2, 1,
             false, 0, true, "2010051415093467A03C1ACC$945C3759F1@COMPUTER", DisplayName = "xhtml-xmlns-gmail-ext-big-mbox")] //invalid namespace declaration
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
             false, 0, true, "4313980.1156434894479.JavaMail.root@fac1010", DisplayName = "xhtml-QUOT-gmail-ext-big-mbox")] //undefined character entity &QUOT; -- all upper case
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 0, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 0, 1,
             false, 0, true, "ee4ca1ce-f044-4536-85d3-553b088bb1dc@las1s04mta905.xt.local", DisplayName = "xhtml-2head-gmail-ext-big-mbox")] //two head elements
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
             false, 0, true, "A5.52.33171.CC105236@gx.mta2vrest.cc.prd.sparkpost", DisplayName = "xhtml-body-text-gmail-ext-big-mbox")] //text content in the body
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
             false, 0, true, "0.1.BE.4E2.1D77914FC5A11B8.0@omptrans.mail.synchronybank.com", DisplayName = "xhtml-head-xmlns-gmail-ext-big-mbox")] //head element has an invalid xmlns attribute
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
             false, 0, true, "4b3ed4f78bcaae4d31caac7d6c4c22c5884b5b09-20081988-110484621@google.com", DisplayName = "xhtml-head-text-xmlns-gmail-ext-big-mbox")] //head element has text
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_skipx", "MD5", true, false, false, false, false, false, 0, 1, 1,
             false, 0, true, "FredricPaulEditor-in-Chief.665xjq1q0.dshl@cmp-subscriptions.p0.com", DisplayName = "xhtml-html-text-xmlns-gmail-ext-big-mbox")] //html element has text
 
 
@@ -631,9 +632,9 @@ namespace UIUCLibrary.TestEaPdf
             //}
         }
 
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_all", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_all", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
             false, 0, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_split", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
+        [DataRow("K:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_split", "MD5", true, false, false, false, false, false, 0, 99600, 248311,
             false, 10000000, false, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
 
         [DataTestMethod]

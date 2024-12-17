@@ -318,11 +318,11 @@ namespace UIUCLibrary.TestEaPdf
         [TestMethod]
         public void TestIsMbox()
         {
-            string sampleMboxFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\inbox";
-            string sampleMboxSpFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\Inbox_leading_whitespaces";
-            string sampleMbxFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\Pine\\sent-mail-sep-2006";
-            string sampleEmlFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\Non-Western\\Arabic\\FW Arabic email testing.eml";
-            string sampleEmlSpFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\Gmail\\leading_white_space.eml";
+            string sampleMboxFile = "K:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\inbox";
+            string sampleMboxSpFile = "K:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\Inbox_leading_whitespaces";
+            string sampleMbxFile = "K:\\EmailsForTesting\\SampleFiles\\Testing\\Pine\\sent-mail-sep-2006";
+            string sampleEmlFile = "K:\\EmailsForTesting\\SampleFiles\\Testing\\Non-Western\\Arabic\\FW Arabic email testing.eml";
+            string sampleEmlSpFile = "K:\\EmailsForTesting\\SampleFiles\\Testing\\Gmail\\leading_white_space.eml";
 
             Assert.IsTrue(MimeKitHelpers.IsMboxFile(sampleMboxFile, out string leader1));
             Assert.IsTrue(string.IsNullOrEmpty(leader1));

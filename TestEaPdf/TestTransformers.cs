@@ -19,7 +19,7 @@ namespace UIUCLibrary.TestEaPdf
         ILogger<EaxsToEaPdfProcessor>? logger;
         ILoggerFactory? loggerFactory;
         readonly List<string> loggedLines = new();
-        readonly string testFilesBaseDirectory = @"D:\EmailsForTesting\SampleFiles\Testing";
+        readonly string testFilesBaseDirectory = @"K:\EmailsForTesting\SampleFiles\Testing";
 
         [TestInitialize]
         public void InitTest()

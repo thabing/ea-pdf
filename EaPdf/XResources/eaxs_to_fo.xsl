@@ -429,6 +429,7 @@
 		<fo:bookmark starting-state="hide">
 			<xsl:call-template name="InternalDestinationToMessageHeader"/>
 			<fo:bookmark-title>
+				<xsl:text>(</xsl:text><xsl:value-of select="eaxs:LocalId"/><xsl:text>) </xsl:text>
 				<xsl:value-of select="normalize-space(eaxs:Subject)"/>
 				<xsl:text>&#13;&#10;from </xsl:text><xsl:value-of select="normalize-space(eaxs:From)"/>
 				<xsl:text>&#13;&#10;on </xsl:text><xsl:value-of select="fn:format-dateTime(eaxs:OrigDate, '[FNn], [MNn] [D], [Y]')"/>
@@ -452,7 +453,7 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:SingleBody" mode="RenderBookmarks">
-		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:DeliveryStatus" mode="RenderBookmarks"/>
+		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:DeliveryStatus | eaxs:ChildMessage" mode="RenderBookmarks"/>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:BodyContent" mode="RenderBookmarks">
@@ -477,6 +478,28 @@
 					<fo:bookmark-title><xsl:value-of select="../eaxs:ContentType"/></fo:bookmark-title>
 				</fo:bookmark>
 			</xsl:if>
+		</xsl:if>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:ChildMessage" mode="RenderBookmarks">
+		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
+		<xsl:if test="not(ancestor::eaxs:ChildMessage)">
+			<!-- the content of child messages do not have their own content set -->
+			<fo:bookmark>
+				<xsl:attribute name="internal-destination">
+					<xsl:call-template name="ContentSetId">
+						<xsl:with-param name="type">BodyRendering</xsl:with-param>
+						<xsl:with-param name="subtype"><xsl:value-of select="fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))"/></xsl:with-param>
+						<!-- There can be multiple bodies with the same MIME type which could result in duplicate ids, so need to add a counter number -->
+						<xsl:with-param name="number">
+							<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+							<xsl:text>.</xsl:text>
+							<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
+						</xsl:with-param> 
+					</xsl:call-template>
+				</xsl:attribute>
+				<fo:bookmark-title><xsl:value-of select="../eaxs:ContentType"/></fo:bookmark-title>
+			</fo:bookmark>
 		</xsl:if>
 	</xsl:template>
 
@@ -865,7 +888,8 @@
 	<xsl:template name="AbbreviatedHeader">
 		<fo:block xml:lang="en" xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H3"/>
 			<xsl:call-template name="FolderHeader"/> &gt; 
-			Message <xsl:value-of select="ancestor::eaxs:Message[1]/eaxs:LocalId"/> &gt;
+			<xsl:if test="ancestor::eaxs:ChildMessage">Child</xsl:if>
+			Message <xsl:value-of select="reverse(ancestor::eaxs:ChildMessage | ancestor::eaxs:Message)[1]/eaxs:LocalId"/> &gt;
 			<xsl:value-of select="../eaxs:ContentType"/>
 		</fo:block>
 		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
@@ -1127,14 +1151,18 @@
 				<fo:block xml:lang="und">
 					<xsl:apply-templates/>
 					<xsl:call-template name="AttachmentLink"/>
-					<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and (fn:lower-case(normalize-space(.)) = 'text/plain' or fn:lower-case(normalize-space(.)) = 'text/html')">
+					<xsl:if test="my:IsBodyContent(.)"> 
 						<fo:basic-link>
 							<xsl:attribute name="internal-destination">
 								<xsl:call-template name="ContentSetId">
 									<xsl:with-param name="type" select="'BodyRendering'"/>
 									<xsl:with-param name="subtype"><xsl:value-of select="."/></xsl:with-param>
+
+									<!-- TODO:  The internal-destination must make accomodations for ChildMessages -->
+									<!-- Instead of ancestor::eaxs:Message/eaxs:LocalId, add support for ancestor::eaxs:ChildMessage/eaxs:LocalId -->
+
 									<xsl:with-param name="number">
-										<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+										<xsl:value-of select="reverse(ancestor::eaxs:ChildMessage | ancestor::eaxs:Message)[1]/eaxs:LocalId"/>
 										<xsl:text>.</xsl:text>
 										<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
 									</xsl:with-param>
@@ -1204,7 +1232,7 @@
 	
 	<xsl:template match="eaxs:SingleBody" mode="RenderContent">
 		<!-- only render child messages if they contain plain text or html content -->
-		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:ChildMessage[.//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:ContentType))='text/plain' or fn:lower-case(normalize-space(eaxs:ContentType)) = 'text/html']] | eaxs:DeliveryStatus" mode="RenderContent"/>
+		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:DeliveryStatus | eaxs:ChildMessage[.//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:ContentType))='text/plain' or fn:lower-case(normalize-space(eaxs:ContentType)) = 'text/html' or fn:lower-case(normalize-space(eaxs:ContentType)) = 'text/rtf']]" mode="RenderContent"/>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:BodyContent" mode="RenderContent">
@@ -1237,8 +1265,23 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:ChildMessage" mode="RenderContent">
-		<fo:block xsl:use-attribute-sets="child-message">
-			<xsl:if test="count(ancestor::eaxs:ChildMessage) > 0">
+		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
+		<xsl:variable name="NestedChild" as="xs:boolean" select="count(ancestor::eaxs:ChildMessage) > 0"/>
+		<fo:block xsl:use-attribute-sets="child-message"><xsl:call-template name="tag-Art"/>
+			<xsl:if test="not(ancestor::eaxs:ChildMessage)">
+				<!-- the content of child messages do not have their own content set -->
+				<xsl:call-template name="BeginContentSet">
+					<xsl:with-param name="type">BodyRendering</xsl:with-param>
+					<xsl:with-param name="subtype"><xsl:value-of select="fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))"/></xsl:with-param>
+					<!-- There can be multiple bodies with the same MIME type which could result in duplicate ids, so need to add a counter number -->
+					<xsl:with-param name="number">
+						<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+						<xsl:text>.</xsl:text>
+						<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
+					</xsl:with-param> 
+				</xsl:call-template>
+			</xsl:if>
+			<xsl:if test="$NestedChild">
 				<xsl:call-template name="hr"/>
 			</xsl:if>
 			<fo:block xsl:use-attribute-sets="h3" xml:lang="en"><xsl:call-template name="tag-H3"/>
@@ -1271,6 +1314,8 @@
 					</xsl:with-param> 
 				</xsl:call-template>
 			</xsl:if>
+			<xsl:call-template name="AbbreviatedHeader"/>				
+			<xsl:call-template name="hr"/>
 			<fo:block xsl:use-attribute-sets="h3"><xsl:call-template name="tag-H3"/>Delivery Status</fo:block>
 			<fo:block xsl:use-attribute-sets="h4"><xsl:call-template name="tag-H4"/>Per Message Fields</fo:block>
 			<fo:list-block provisional-distance-between-starts="10em" provisional-label-separation="0.25em">
@@ -1290,9 +1335,6 @@
 					</fo:list-item>					
 				</xsl:for-each>
 			</fo:list-block>
-			<xsl:if test="../following-sibling::eaxs:SingleBody/eaxs:ChildMessage">
-				<xsl:call-template name="hr"/>
-			</xsl:if>
 		</fo:block>
 	</xsl:template>
 

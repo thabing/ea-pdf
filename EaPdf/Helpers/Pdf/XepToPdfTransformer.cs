@@ -32,6 +32,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 if (!ret.StartsWith("XEP", StringComparison.OrdinalIgnoreCase))
                 {
                     ret = "UNKNOWN VERSION";
+                    //TODO: Add the ret value to the log output for diagnostics
                 }
 
                 return ret;

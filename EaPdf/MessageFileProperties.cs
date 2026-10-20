@@ -44,6 +44,12 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
+        /// The most recent MIME entity content file name (ContentName or DispositionFileName), if any
+        /// Used the name child attachments, if needed
+        /// </summary>
+        public string? PreviousContentFileName { get; set; } = null;
+
+        /// <summary>
         /// If true, the file was skipped during processing
         /// </summary>
         public bool FileWasSkipped { get; set; } = false;

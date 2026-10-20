@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Xml;
+using UIUCLibrary.EaPdf.Helpers;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -104,6 +105,11 @@ namespace UIUCLibrary.EaPdf
         /// This is to improve rendering when converting to PDF or other display formats
         /// </summary>
         public bool SaveTextAsXhtml { get; set; } = false;
+
+        /// <summary>
+        /// Set whether RTF message bodies should be renders as XHTML, application/rtf and text/rtf may be handled differently
+        /// </summary>  
+        public Helpers.RtfConvertType SaveRtfAsXhtml { get; set; } = RtfConvertType.None;
 
         /// <summary>
         /// LogLevels equal to or above this threshold will also be written to the output XML file as comments

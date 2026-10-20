@@ -85,6 +85,8 @@ namespace UIUCLibrary.EaPdf
         /// <exception cref="FileNotFoundException"></exception>
         public EmailToEaxsProcessor(ILogger logger, EmailToEaxsProcessorSettings settings)
         {
+            // Add a reference to the NuGet package System.Text.Encoding.CodePages for .Net core only
+            // Needed for MimeKit, https://github.com/jstedfast/MimeKit/issues/330, and also for RtfPipe
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -1540,7 +1542,7 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteStartElement("LocalId", XM_NS);
             xwriter.WriteValue(localId);
-            xwriter.WriteEndElement();
+            xwriter.WriteEndElement(); //LocalId
 
             //check for minimum required headers as per the XML schema, unless the message is a draft
             if (!isChildMessage && !MimeKitHelpers.TryGetDraft(message, mimeMsgProps, out _))
@@ -1878,7 +1880,7 @@ namespace UIUCLibrary.EaPdf
 
 
             xwriter.WriteStartAttribute("IsAttachment");
-            xwriter.WriteValue(mimeEntity.IsAttachment);
+            xwriter.WriteValue(mimeEntity.IsAttachmentEx(Settings.SaveRtfAsXhtml));
             xwriter.WriteEndAttribute();
 
             //check for invalid content-type and content-transfer-encoding combinations
@@ -1893,11 +1895,11 @@ namespace UIUCLibrary.EaPdf
                 WriteToLogWarningMessage(xwriter, $"A 'message/rfc822' part was found with an unallowable content-transfer-encoding of '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding)}'.  The part will be treated as normal content instead of as a child message.");
             }
 
-            WriteMimeContentType(xwriter, mimeEntity, isMultipart);
+            WriteMimeContentType(xwriter, mimeEntity, isMultipart, msgFileProps);
 
             WriteMimeOtherStandardHeaders(xwriter, mimeEntity, isMultipart);
 
-            WriteMimeContentDisposition(xwriter, mimeEntity);
+            WriteMimeContentDisposition(xwriter, mimeEntity, msgFileProps);
 
             if (mimeEntity.Headers[HeaderId.ContentLanguage] != null)
             {
@@ -2074,9 +2076,10 @@ namespace UIUCLibrary.EaPdf
             //The message parameter might contain a MessagePart or its subclass TextRfc822Headers
             //If it is TextRfc822Headers it will not have a MessageBody.  This is handle correctly in the WriteMessageBody function 
             xwriter.WriteStartElement("ChildMessage", XM_NS);
-            localId++;
 
+            localId++;
             localId = WriteMessage(xwriter, message, localId, true, expectingBodyContent, msgFileProps, mimeMsgProps);
+
             xwriter.WriteEndElement(); //ChildMessage
             return localId;
         }
@@ -2085,8 +2088,41 @@ namespace UIUCLibrary.EaPdf
         {
 
             //if it is text and not an attachment, save embedded in the XML
-            //FUTURE: Maybe accomodate txtPart.IsEnriched || txtPart.IsRichText instead of treating them as non-text
-            if (part is TextPart txtPart && (txtPart.IsPlain || txtPart.IsHtml) && !part.IsAttachment)
+            //FUTURE: Maybe accomodate txtPart.IsEnriched instead of treating them as non-text
+
+            //Note: RichText has two MIME types: text/rtf and application/rtf, handle these based on Settings.SaveRtfAsXhtml
+            //QUESTION: Also, maybe these should only be rendered as xhtml if they are alternatives or the only part in the message (as in TNEF)
+            if (part is TextPart richTxtPart && richTxtPart.IsRichText && !part.IsAttachment)
+            {
+                if (
+                    (part.ContentType.IsMimeType("text", "rtf") && Settings.SaveRtfAsXhtml.HasFlag(RtfConvertType.Text_Rtf)) ||
+                    (part.ContentType.IsMimeType("application", "rtf") && Settings.SaveRtfAsXhtml.HasFlag(RtfConvertType.Application_Rtf))
+                    )
+                {
+                    var xhtml = MimeKitHelpers.GetTextAsXhtml(richTxtPart, out List<(LogLevel level, string message)> messages);
+                    WriteToLogMessages(xwriter, messages);
+                    if (string.IsNullOrWhiteSpace(xhtml) || messages.Any(m => m.level == LogLevel.Error || m.level == LogLevel.Critical))
+                    {
+                        //if the html is blank or if there were serious errors converting to xhtml, we cannot save the content as xhtml
+                        WriteToLogWarningMessage(xwriter, "Unable to convert RTF content to XHTML.  Saving as attachment instead.  See additional messages below:");
+                        WriteToLogMessages(xwriter, messages);
+                        localId = SerializeContent(xwriter, part, localId, msgFileProps);
+                    }
+                    else
+                    {
+                        //UNDONE:  Write the wrapper XML for the xhtml content
+                        xwriter.WriteStartElement("BodyContent", XM_NS);
+                        WriteContentAsXhtmlRaw(xwriter, xhtml);
+                        xwriter.WriteEndElement(); //BodyContent
+                    }
+                }
+                else
+                {
+                    //treat the RTF as an attachment
+                    localId = WriteRtfAttachment(xwriter, richTxtPart, localId, msgFileProps);
+                }
+            }
+            else if (part is TextPart txtPart && (txtPart.IsPlain || txtPart.IsHtml) && !part.IsAttachmentEx(Settings.SaveRtfAsXhtml))
             {
                 var (text, encoding, warning) = MimeKitHelpers.GetContentText(part);
 
@@ -2129,17 +2165,49 @@ namespace UIUCLibrary.EaPdf
                 //       See https://www.oreilly.com/library/view/programming-internet-email/9780596802585/ch04s04s01.html
                 //       Also consider the "X-Mozilla-External-Attachment-URL: url" and the "X-Mozilla-Altered: AttachmentDetached; date="Thu Jul 06 21:38:39 2006"" headers
 
-                if (Settings.SaveAttachmentsAndBinaryContentExternally)
+                localId = SerializeContent(xwriter, part, localId, msgFileProps);
+
+            }
+
+            return localId;
+        }
+
+        private long WriteRtfAttachment(XmlWriter xwriter, TextPart part, long localId, MessageFileProperties msgFileProps)
+        {
+            if(string.IsNullOrWhiteSpace(part.ContentType.Name) && string.IsNullOrWhiteSpace(part.ContentDisposition?.FileName))
+            {
+                string name = $"UnnamedAttachment{localId,3:000}.rtf";
+                if (string.IsNullOrWhiteSpace(msgFileProps.PreviousContentFileName))
                 {
-                    //save non-text content or attachments externally, possibly wrapped in XML
-                    localId = SerializeContentInExtFile(part, xwriter, localId, msgFileProps);
+                    WriteToLogWarningMessage(xwriter, $"The RTF content does not have a name or filename.  Saving as attachment with a generic name: '{name}'.");
                 }
                 else
                 {
-                    //save non-text content or attachments as part of the XML
-                    var (hash, size, imageWidth, imageHeight) = SerializeContentInXml(part, xwriter, false, localId);
+                    name = Path.ChangeExtension(msgFileProps.PreviousContentFileName, "rtf");
+                    WriteToLogWarningMessage(xwriter, $"The RTF content does not have a name or filename.  Saving as attachment using the name of its parent: '{name}'.");
                 }
+                WriteElementStringReplacingInvalidChars(xwriter, "ContentName", XM_NS, name);
+                xwriter.WriteElementString("TransferEncoding", XM_NS, "base64");
+                xwriter.WriteElementString("Disposition", XM_NS, "attachment");
+                WriteElementStringReplacingInvalidChars(xwriter, "DispositionFileName", XM_NS, name);
+                localId = SerializeContent(xwriter, part, localId, msgFileProps);
             }
+            return localId;
+        }
+
+        private long SerializeContent(XmlWriter xwriter, MimePart part, long localId, MessageFileProperties msgFileProps)
+        {
+            if (Settings.SaveAttachmentsAndBinaryContentExternally)
+            {
+                //save non-text content or attachments externally, possibly wrapped in XML
+                localId = SerializeContentInExtFile(part, xwriter, localId, msgFileProps);
+            }
+            else
+            {
+                //save non-text content or attachments as part of the XML
+                var (hash, size, imageWidth, imageHeight) = SerializeContentInXml(part, xwriter, false, localId);
+            }
+
             return localId;
         }
 
@@ -2241,7 +2309,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private void WriteMimeContentDisposition(XmlWriter xwriter, MimeEntity mimeEntity)
+        private void WriteMimeContentDisposition(XmlWriter xwriter, MimeEntity mimeEntity, MessageFileProperties msgFileProps)
         {
             if (mimeEntity.ContentDisposition != null)
             {
@@ -2251,6 +2319,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 if (!string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.FileName))
                 {
+                    msgFileProps.PreviousContentFileName = mimeEntity.ContentDisposition.FileName;
                     WriteElementStringReplacingInvalidChars(xwriter, "DispositionFileName", XM_NS, mimeEntity.ContentDisposition.FileName);
                 }
 
@@ -2267,7 +2336,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private void WriteMimeContentType(XmlWriter xwriter, MimeEntity mimeEntity, bool isMultipart)
+        private void WriteMimeContentType(XmlWriter xwriter, MimeEntity mimeEntity, bool isMultipart, MessageFileProperties msgFileProps)
         {
 
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentType.MimeType))
@@ -2298,6 +2367,7 @@ namespace UIUCLibrary.EaPdf
             }
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentType.Name))
             {
+                msgFileProps.PreviousContentFileName = mimeEntity.ContentType.Name;
                 WriteElementStringReplacingInvalidChars(xwriter, "ContentName", XM_NS, mimeEntity.ContentType.Name);
             }
             if (isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentType.Boundary))
@@ -2488,6 +2558,7 @@ namespace UIUCLibrary.EaPdf
                 try
                 {
                     //this seems to trigger the virus scanner, otherwise an IO error may not occur until we try to move the file later
+                    //Note that this will not work if the file is on a Dev Drive with the virus scanner in performance mode (asynchronous scanning)
                     using var testStream = new FileStream(randomFilePath, FileMode.Open, FileAccess.Read);
                     testStream.Close();
                 }
@@ -2703,6 +2774,9 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteToLogMessages(XmlWriter xwriter, List<(LogLevel level, string message)> messages)
         {
+            if (messages.Count == 0)
+                return;
+
             // Get rid of duplicate messages and add a count
             var uniqueMessages = from m in messages
                                  group m by m into g
@@ -2736,7 +2810,7 @@ namespace UIUCLibrary.EaPdf
         private void WriteToLogIfDuplicateMessageIds(XmlWriter xwriter, List<MessageBrief> messages)
         {
             var dups = messages.GroupBy(m => m.MessageID).Where(g => g.Count() > 1);
-            if(!dups.Any())
+            if (!dups.Any())
                 return;
 
             StringBuilder sb = new();

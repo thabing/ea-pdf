@@ -521,4 +521,20 @@
         <xsl:value-of select="my:Combine(my:GetDirectoryName($baseUri), $pfile)"/>
     </xsl:function>
     
+    <!-- Determine whether the ContentType represents a renderable content body or not at the top level -->
+    <xsl:function name="my:IsBodyContent" as="xs:boolean">
+        <xsl:param name="contentType" as="element(eaxs:ContentType)"/>
+        <xsl:value-of select="not($contentType/ancestor::eaxs:ChildMessage) and 
+            not(fn:lower-case(normalize-space($contentType/../@IsAttachment)) = 'true') and 
+            (
+            fn:lower-case(normalize-space($contentType)) = 'text/plain' or 
+            fn:lower-case(normalize-space($contentType)) = 'text/html' or 
+            fn:lower-case(normalize-space($contentType)) = 'text/rtf' or
+            fn:lower-case(normalize-space($contentType)) = 'message/delivery-status' or 
+			fn:lower-case(normalize-space($contentType)) = 'message/rfc822' or
+            fn:lower-case(normalize-space($contentType)) = 'application/ms-tnef' or
+			fn:lower-case(normalize-space($contentType)) = 'application/vnd.ms-tnef'
+            )"/>
+    </xsl:function>
+    
 </xsl:stylesheet>

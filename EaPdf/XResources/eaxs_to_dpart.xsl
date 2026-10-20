@@ -87,7 +87,7 @@
 	
 	<xsl:template match="eaxs:SingleBody" >
 		<!-- only render child messages if they contain plain text or html content -->
-		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:DeliveryStatus"/>
+		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:DeliveryStatus | eaxs:ChildMessage"/>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:BodyContent">
@@ -118,7 +118,7 @@
 		<!-- TODO -->
 	</xsl:template>
 	
-	<xsl:template match="eaxs:DeliveryStatus">
+	<xsl:template match="eaxs:DeliveryStatus | eaxs:ChildMessage">
 		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
 		<xsl:variable name="ContentTypeHuman">
 			<xsl:call-template name="HumanReadableContentType"/>
@@ -145,8 +145,12 @@
 		<xsl:choose>
 			<xsl:when test="$ContentTypeNorm = 'text/plain'">plain text</xsl:when>
 			<xsl:when test="$ContentTypeNorm = 'text/html'">HTML</xsl:when>
+			<xsl:when test="$ContentTypeNorm = 'text/rtf'">rich text</xsl:when>
 			<xsl:when test="$ContentTypeNorm = 'application/xhtml+xml'">XHTML</xsl:when>
 			<xsl:when test="$ContentTypeNorm = 'message/delivery-status'">delivery status</xsl:when>
+			<xsl:when test="$ContentTypeNorm = 'message/rfc822'">child message</xsl:when>
+			<xsl:when test="$ContentTypeNorm = 'application/ms-tnef'">Microsoft TNEF</xsl:when>
+			<xsl:when test="$ContentTypeNorm = 'application/vnd.ms-tnef'">Microsoft TNEF</xsl:when>
 			<xsl:otherwise>
 				'<xsl:value-of select="$ContentTypeNorm"/>'
 			</xsl:otherwise>

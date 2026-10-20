@@ -22,6 +22,11 @@ This solution consists of three projects:
 
 Refer to the README.md file in the EaPdfCmd project for more information on how to use the tool.
 
+## Testing
 Also note that the most of the sample emails used in the tests are not currently included in the code repository.  For
-the time being you will need to substitute your own sample emails for testing purposes.  
+the time being you will need to substitute your own sample emails for testing purposes. 
+
+Also note that if you are using a Dev Drive, the test files should be placed on a different drive.  The performance mode
+of the virus scanner on Dev Drives will prevent the code from detecting virus attachments or other unwanted
+files.
 

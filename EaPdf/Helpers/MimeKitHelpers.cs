@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using MimeKit;
+using MimeKit.Cryptography;
 using MimeKit.Encodings;
 using MimeKit.Text;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -708,6 +708,11 @@ namespace UIUCLibrary.EaPdf.Helpers
                 //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
                 htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
             }
+            else if (txtPart.IsRichText)
+            {
+                //convert the rtf to xhtml, ignoring any issues since this was already derived from plain text
+                htmlText = RtfHelpers.ConvertToXhtml(txtPart, ref messages, true);
+            }
             else
             {
                 //TODO: Need to make accomodations for text/enriched (and text/richtext? -- not Microsoft RTF), see Pine sent-mail-aug-2007, message id: 4d2cbdd341d0e87da57ba2245562265f@uiuc.edu                 
@@ -715,6 +720,35 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
 
             return htmlText;
+        }
+
+        /// <summary>
+        /// Determine if the part is an attachment, but exclude RTF files if they are to be saved as XHTML
+        /// </summary>
+        /// <param name="part"></param>
+        /// <param name="saveRtfAsXhtml"></param>
+        /// <returns></returns>
+        public static bool IsAttachmentEx(this MimeEntity part, RtfConvertType saveRtfAsXhtml)
+        {
+            bool ret = part.IsAttachment;
+
+            //special case for RTF files
+            if (part.ContentType.IsMimeType("*", "rtf"))
+                {
+                if (
+                    (part.ContentType.IsMimeType("text", "rtf") && saveRtfAsXhtml.HasFlag(RtfConvertType.Text_Rtf)) ||
+                    (part.ContentType.IsMimeType("application", "rtf") && saveRtfAsXhtml.HasFlag(RtfConvertType.Application_Rtf))
+                    )
+                {
+                    ret = false;
+                }
+                else
+                {
+                    ret = true;
+                }
+            }
+
+            return ret;
         }
 
         #region DetermineMessageFileTypes
@@ -1001,7 +1035,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (!type.IsFolder())
                 return false;
 
-            if(!type.HasFlag(InputType.UnknownFile))
+            if (!type.HasFlag(InputType.UnknownFile))
                 return false;
 
             if (type.HasFlag(InputType.MboxFile) || type.HasFlag(InputType.EmlFile))
@@ -1026,7 +1060,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (!type.IsFolder())
                 return false;
 
-            if(type.HasFlag(InputType.EmlFile) && !type.HasFlag(InputType.MboxFile))
+            if (type.HasFlag(InputType.EmlFile) && !type.HasFlag(InputType.MboxFile))
                 return true;
 
             return false;
@@ -1052,5 +1086,16 @@ namespace UIUCLibrary.EaPdf.Helpers
         Folder = MimeKitHelpers.INPUT_TYPE_FOLDER //indicates the input is a folder containing files, use bitmasks to determine the type of email message files in the folder
     }
 
+    /// <summary>
+    /// Enum flag indicating which RTF files to convert to XHTML
+    /// </summary>
+    [Flags]
+    public enum RtfConvertType : uint
+    {
+        None = 0,
+        Text_Rtf = 1,
+        Application_Rtf = 2,
+        Both = Text_Rtf | Application_Rtf
+    }
 
 }

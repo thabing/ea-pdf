@@ -598,7 +598,8 @@ namespace UIUCLibrary.EaPdf
             //if the mime header has its own description, use that
             string descr = extAttachmentNode.SelectSingleNode("../xm:Description", xmlns)?.InnerText ?? "";
 
-            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? "[Missing Value]";
+            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? "[Missing Message Id]";
+            string localId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:LocalId", xmlns)?.InnerText ?? "[Missing Local Id]";
             var froms = extAttachmentNode.SelectNodes("ancestor::xm:Message/xm:From/xm:Mailbox", xmlns);
 
 
@@ -622,7 +623,7 @@ namespace UIUCLibrary.EaPdf
                 }
             }
             string subj = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:Subject", xmlns)?.InnerText ?? "[Missing Value]";
-            string ret = $"Attachment from Message ID '{msgId}' From {from} To {to} Subject '{subj}'";
+            string ret = $"Attachment from Message ID ({localId,3}) '{msgId}' From {from} To {to} Subject '{subj}'";
 
             if (!string.IsNullOrWhiteSpace(descr))
             {
